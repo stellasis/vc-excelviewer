@@ -120,24 +120,58 @@ function applySnapshot(snapshot) {
 }
 
 function loadSheet(index) {
-    if (!workbook || !gridApi) return;
+    if (!workbook) return;
     currentSheetIndex = index;
     var sheetName = workbook.SheetNames[index];
     if (!sheetName) return;
     var ws = workbook.Sheets[sheetName];
     var result = sheetToGridData(ws);
 
-    gridApi.updateGridOptions({
+    if (gridApi) {
+        gridApi.destroy();
+        gridApi = null;
+    }
+
+    var options = getOptions();
+    var container = document.getElementById('sheet');
+    gridApi = agGrid.createGrid(container, {
         columnDefs: result.colDefs,
-        rowData: result.rowData
+        rowData: result.rowData,
+        defaultColDef: {
+            sortable: true,
+            filter: true,
+            resizable: true,
+            editable: options.customEditor,
+            minWidth: 40
+        },
+        rowHeight: 28,
+        multiSortKey: 'shift',
+        suppressScrollOnNewData: true,
+        stopEditingWhenCellsLoseFocus: true,
+        onCellValueChanged: function() {
+            if (!options.customEditor) return;
+            vsCodeApi.postMessage({ changed: true, reason: "Cell Edited" });
+            doPreserveState();
+        },
+        onCellEditingStarted: function() {
+            saveCurrentSheetToWorkbook();
+            var snap = snapshotWorkbook();
+            if (snap) {
+                undoStack.push(snap);
+                if (undoStack.length > 50) undoStack.shift();
+                redoStack = [];
+            }
+        },
+        onColumnResized: function(e) { if (e.finished) doPreserveState(); },
+        onSortChanged: function() { doPreserveState(); },
+        onFilterChanged: function() { doPreserveState(); },
     });
-    gridApi.hideOverlay();
 
     updateTabs();
     setTimeout(function() {
         if (result.colDefs.length > 0) {
             gridApi.autoSizeAllColumns();
-            capColumnWidths(gridApi, options.maxColumnWidth);
+            capColumnWidths(gridApi, getOptions().maxColumnWidth);
         }
     }, 50);
 }
@@ -179,59 +213,12 @@ function doPreserveState() {
 
 function initPage() {
     vsCodeApi = acquireVsCodeApi();   // called exactly once here
-    var options = getOptions();
     sendMessage = vsCodeApi.postMessage.bind(vsCodeApi);
 
-    function applyState() {
-        if (ignoreState()) return;
-        var json = vsCodeApi.getState() || options.state;
-        if (json && json.version && json.version >= "5.0.0") {
-            if (json.selectedSheetIndex >= 0 && workbook
-                && json.selectedSheetIndex < workbook.SheetNames.length) {
-                saveCurrentSheetToWorkbook();
-                loadSheet(json.selectedSheetIndex);
-            }
-        }
-    }
+    vsCodeApi.postMessage({ refresh: true });
 
-    var gridOptions = {
-        columnDefs: [],
-        rowData: [],
-        defaultColDef: {
-            sortable: true,
-            filter: true,
-            resizable: true,
-            editable: options.customEditor,
-            minWidth: 40
-        },
-        rowHeight: 28,
-        suppressScrollOnNewData: true,
-        stopEditingWhenCellsLoseFocus: true,
-        onCellValueChanged: function() {
-            if (!options.customEditor) return;
-            vsCodeApi.postMessage({ changed: true, reason: "Cell Edited" });
-            doPreserveState();
-        },
-        onCellEditingStarted: function() {
-            saveCurrentSheetToWorkbook();
-            var snap = snapshotWorkbook();
-            if (snap) {
-                undoStack.push(snap);
-                if (undoStack.length > 50) undoStack.shift();
-                redoStack = [];
-            }
-        },
-        onColumnResized: function(e) { if (e.finished) doPreserveState(); },
-        onSortChanged: function() { doPreserveState(); },
-        onFilterChanged: function() { doPreserveState(); },
-        onGridReady: function() {
-            vsCodeApi.postMessage({ refresh: true });
-        }
-    };
-
+    var options = getOptions();
     var container = document.getElementById('sheet');
-    gridApi = agGrid.createGrid(container, gridOptions);
-
     container.addEventListener('contextmenu', function(e) {
         if (!options.customEditor) { e.preventDefault(); e.stopPropagation(); }
     }, true);

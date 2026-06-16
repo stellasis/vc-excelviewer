@@ -456,6 +456,7 @@ function initPage() {
         },
         rowHeight: options.wrapText ? undefined : 28,
         rowBuffer: 20,
+        multiSortKey: 'shift',
         suppressScrollOnNewData: true,
         stopEditingWhenCellsLoseFocus: true,
         // Editor mode: object API so we can disable click-to-select (clicks start editing instead)

@@ -84,9 +84,9 @@ export default class ExcelDocumentView extends BaseDocumentView {
         <script src="${this.scriptUri}/ag-grid-community.min.js" type="text/javascript"></script>
         <script src="${this.scriptUri}/xlsx.full.min.js" type="text/javascript"></script>
         <script src="${this.scriptUri}/excel.js"></script>
-        <body style="padding:0px; overflow:hidden; display:flex; flex-direction:column;" onload="resizeSheet()" onresize="resizeSheet()">
-            <div id="sheet-container" style="flex:1; display:flex; flex-direction:column; overflow:hidden;">
-                <div id="sheet" class="ag-theme-alpine" style="flex:1; width:100%;"></div>
+        <body style="padding:0px; overflow:hidden; display:flex; flex-direction:column; height:100vh;" onload="resizeSheet()" onresize="resizeSheet()">
+            <div id="sheet-container" style="flex:1; min-height:0; display:flex; flex-direction:column; overflow:hidden;">
+                <div id="sheet" class="ag-theme-alpine" style="flex:1; min-height:0; width:100%;"></div>
                 <div id="sheet-tabs"></div>
             </div>
         </body>
