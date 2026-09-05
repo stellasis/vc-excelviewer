@@ -452,7 +452,7 @@ function initPage() {
             uri: options.uri,
             previewUri: options.previewUri,
             languageId: options.languageId,
-            version: "5.0.0"
+            version: "6.0.0"
         };
         if (gridApi) {
             state.columnState = gridApi.getColumnState();
@@ -471,9 +471,12 @@ function initPage() {
     function applyState() {
         if (ignoreState()) return;
         var json = vscode.getState() || options.state;
-        if (!json || !json.version || json.version < "5.0.0") return;
+        if (!json || !json.version || json.version < "6.0.0") return;
         if (json.columnState) {
-            gridApi.applyColumnState({ state: json.columnState, applyOrder: true });
+            var colCount = (gridApi.getColumns() || []).length;
+            if (json.columnState.length === colCount) {
+                gridApi.applyColumnState({ state: json.columnState, applyOrder: true });
+            }
         }
         if (json.filterModel) {
             gridApi.setFilterModel(json.filterModel);
@@ -622,17 +625,19 @@ function initPage() {
     });
 }
 
-function parseContent(text) {
+function parseContent(text, sepOverride) {
     const options = getOptions();
     var sep = options.separator;
     var uri = (options.uri || '') + '';
-    if (/\.tsv($|\?)/i.test(uri) || /\.tab($|\?)/i.test(uri) || options.languageId === 'tsv') {
+    var firstLine = ((text || '').split(/\r?\n/, 1)[0] || '');
+    var tabs = (firstLine.match(/\t/g) || []).length;
+    var commas = (firstLine.match(/,/g) || []).length;
+    if (sepOverride) {
+        sep = sepOverride;
+    } else if (/\.tsv($|\?)/i.test(uri) || /\.tab($|\?)/i.test(uri) || options.languageId === 'tsv') {
         sep = '\t';
-    } else {
-        var firstLine = (text.split(/\r?\n/, 1)[0] || '');
-        var tabs = (firstLine.match(/\t/g) || []).length;
-        var commas = (firstLine.match(/,/g) || []).length;
-        if (tabs > commas) sep = '\t';
+    } else if (tabs > commas) {
+        sep = '\t';
     }
     var quote = options.quoteMark;
     var hasHeaders = options.hasHeaders;
@@ -703,7 +708,7 @@ function parseContent(text) {
             continue;
         }
         if (!isComment(line)) {
-            var items = line.split(regexItems);
+            var items = (sep === '\t') ? line.split('\t') : line.split(regexItems);
             if (items.length > maxLength) {
                 maxLength = items.length;
             }
@@ -942,7 +947,7 @@ function handleEvents() {
     window.addEventListener("message", function(event) {
         if (event.data.refresh) {
             clearTimeout(_hideTimer);
-            var content = parseContent(event.data.content);
+            var content = parseContent(event.data.content, event.data.separator);
             sourceData = content.data;
 
             var colDefs = [];

@@ -60,7 +60,7 @@ export default class CsvDocumentView extends BaseDocumentView {
         } else if (lang === 'csv (pipe)') {
             sep = "\\|";
         }
-        if (this.separator) {
+        if (this.separator && lang !== 'tsv' && !path.endsWith('.tsv') && !path.endsWith('.tab')) {
             sep = this.separator;
         }
         return {
@@ -223,7 +223,8 @@ export default class CsvDocumentView extends BaseDocumentView {
             if (!self._disposed) {
                 self.webview.postMessage({
                     refresh: true,
-                    content: document.getText()
+                    content: document.getText(),
+                    separator: self.getOptions().separator
                 });
             }
         }, reason => {
@@ -242,7 +243,7 @@ export default class CsvDocumentView extends BaseDocumentView {
             <link href="${this.scriptUri}/styles/vscode.css" rel="stylesheet" type="text/css" />
         </head>
         <script src="${this.scriptUri}/ag-grid-community.min.js" type="text/javascript"></script>
-        <script src="${this.scriptUri}/csv.js"></script>
+        <script src="${this.scriptUri}/csv.js?v=1.10.3"></script>
         <body style="padding:0px; overflow:hidden" onload="resizeGrid()" onresize="resizeGrid()">
             <div id="flex" class="ag-theme-alpine" style="width:100%;"></div>
         </body>
