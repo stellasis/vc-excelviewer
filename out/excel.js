@@ -7,7 +7,8 @@ var undoStack = [];
 var redoStack = [];
 
 function capColumnWidths(api, maxColumnWidth) {
-    var maxW = maxColumnWidth != null ? maxColumnWidth : 300;
+    var maxW = maxColumnWidth != null ? Number(maxColumnWidth) : 0;
+    if (!isFinite(maxW) || maxW <= 0) return;
     var cols = api.getColumns();
     if (!cols) return;
     var updates = [];
@@ -15,6 +16,66 @@ function capColumnWidths(api, maxColumnWidth) {
         if (col.getActualWidth() > maxW) updates.push({ key: col.getId(), newWidth: maxW });
     });
     if (updates.length > 0) api.setColumnWidths(updates);
+}
+
+var excelContextMenuEl = null;
+
+function hideExcelContextMenu() {
+    if (excelContextMenuEl) excelContextMenuEl.style.display = 'none';
+}
+
+function excelDataColumns() {
+    if (!gridApi) return [];
+    return gridApi.getColumns() || [];
+}
+
+function excelVisibleColumns() {
+    return excelDataColumns().filter(function(c) { return c.isVisible(); });
+}
+
+function initExcelContextMenu() {
+    if (document.getElementById('col-context-menu')) return;
+    excelContextMenuEl = document.createElement('div');
+    excelContextMenuEl.id = 'col-context-menu';
+    document.body.appendChild(excelContextMenuEl);
+
+    function addItem(label, onClick) {
+        var item = document.createElement('div');
+        item.className = 'ctx-menu-item';
+        item.textContent = label;
+        item.addEventListener('click', function() {
+            onClick();
+            hideExcelContextMenu();
+        });
+        excelContextMenuEl.appendChild(item);
+    }
+
+    document.addEventListener('contextmenu', function(e) {
+        var headerCell = e.target.closest && e.target.closest('.ag-header-cell');
+        if (!headerCell || !gridApi) { hideExcelContextMenu(); return; }
+        var colId = headerCell.getAttribute('col-id');
+        if (!colId) { hideExcelContextMenu(); return; }
+        e.preventDefault();
+        e.stopPropagation();
+        excelContextMenuEl.innerHTML = '';
+        addItem('Hide Column', function() {
+            if (excelVisibleColumns().length <= 1) return;
+            gridApi.applyColumnState({ state: [{ colId: colId, hide: true }] });
+        });
+        if (excelVisibleColumns().length < excelDataColumns().length) {
+            addItem('Show All Columns', function() {
+                var state = excelDataColumns().map(function(c) {
+                    return { colId: c.getColId(), hide: false };
+                });
+                gridApi.applyColumnState({ state: state });
+            });
+        }
+        excelContextMenuEl.style.left = e.pageX + 'px';
+        excelContextMenuEl.style.top = e.pageY + 'px';
+        excelContextMenuEl.style.display = 'block';
+    });
+
+    document.addEventListener('click', function() { hideExcelContextMenu(); });
 }
 
 function getBinding(n) {
@@ -219,7 +280,10 @@ function initPage() {
 
     var options = getOptions();
     var container = document.getElementById('sheet');
+    initExcelContextMenu();
     container.addEventListener('contextmenu', function(e) {
+        var headerCell = e.target.closest && e.target.closest('.ag-header-cell');
+        if (headerCell) return;
         if (!options.customEditor) { e.preventDefault(); e.stopPropagation(); }
     }, true);
 }

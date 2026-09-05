@@ -2,21 +2,21 @@
     "name": "csv-excel-viewer",
     "displayName": "CSV & Excel Viewer",
     "description": "Preview CSV files and Excel spreadsheets in Visual Studio Code using AG Grid Community and SheetJS — no license required.",
-    "version": "1.9.0",
+    "version": "1.10.0",
     "icon": "img/csv-excel-viewer.png",
-    "publisher": "Development42",
+    "publisher": "stellasis",
     "license": "SEE LICENSE IN LICENSE.txt",
     "galleryBanner": {
         "color": "#7092BE",
         "theme": "dark"
     },
     "bugs": {
-        "url": "https://github.com/paulovlobato/vc-excelviewer/issues"
+        "url": "https://github.com/stellasis/vc-excelviewer/issues"
     },
-    "homepage": "https://github.com/paulovlobato/vc-excelviewer",
+    "homepage": "https://github.com/stellasis/vc-excelviewer",
     "repository": {
         "type": "git",
-        "url": "https://github.com/paulovlobato/vc-excelviewer.git"
+        "url": "https://github.com/stellasis/vc-excelviewer.git"
     },
     "engines": {
         "vscode": "^1.63.0"
@@ -325,9 +325,9 @@
                 },
                 "csv-preview.maxColumnWidth": {
                     "type": "number",
-                    "default": 300,
-                    "minimum": 1,
-                    "description": "Maximum column width in pixels when auto-sizing columns."
+                    "default": 0,
+                    "minimum": 0,
+                    "description": "Max pixels when auto-sizing columns. 0 means no cap: each column fits its longest value."
                 },
                 "csv-preview.lineNumbers": {
                     "type": "string",

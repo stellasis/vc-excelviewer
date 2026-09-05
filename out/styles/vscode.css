@@ -413,3 +413,22 @@ body.csv-theme-dark #status-bar { background-color: #252526 !important; border-c
     background-color: var(--vscode-menu-selectionBackground, var(--vscode-list-hoverBackground));
     color: var(--vscode-menu-selectionForeground, var(--vscode-editor-foreground));
 }
+
+#col-picker {
+    display: none;
+    position: fixed;
+    z-index: 9999;
+    min-width: 180px;
+    max-height: 320px;
+    overflow-y: auto;
+    background-color: var(--vscode-menu-background, var(--vscode-editor-background));
+    border: 1px solid var(--vscode-menu-border, var(--vscode-tree-indentGuidesStroke));
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    font-family: var(--vscode-font-family, inherit);
+    font-size: 12px;
+}
+#col-picker label {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}

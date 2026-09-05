@@ -18,7 +18,8 @@ var contextMenuEl = null;
 var _hideTimer = null;
 
 function capColumnWidths(api, maxColumnWidth) {
-    var maxW = maxColumnWidth != null ? maxColumnWidth : 300;
+    var maxW = maxColumnWidth != null ? Number(maxColumnWidth) : 0;
+    if (!isFinite(maxW) || maxW <= 0) return;
     var cols = api.getColumns();
     if (!cols) return;
     var updates = [];
@@ -26,6 +27,72 @@ function capColumnWidths(api, maxColumnWidth) {
         if (col.getActualWidth() > maxW) updates.push({ key: col.getId(), newWidth: maxW });
     });
     if (updates.length > 0) api.setColumnWidths(updates);
+}
+
+function dataColumns() {
+    if (!gridApi) return [];
+    return (gridApi.getColumns() || []).filter(function(c) {
+        return c.getColId() !== '__lineNum';
+    });
+}
+
+function visibleDataColumns() {
+    return dataColumns().filter(function(c) { return c.isVisible(); });
+}
+
+function setColumnHidden(colId, hidden) {
+    if (!gridApi) return;
+    if (hidden && visibleDataColumns().length <= 1) return;
+    gridApi.applyColumnState({ state: [{ colId: colId, hide: hidden }] });
+    if (preserveStateFn) preserveStateFn();
+    updateStatusBar();
+}
+
+function showAllColumns() {
+    if (!gridApi) return;
+    var state = dataColumns().map(function(c) {
+        return { colId: c.getColId(), hide: false };
+    });
+    gridApi.applyColumnState({ state: state });
+    if (preserveStateFn) preserveStateFn();
+    updateStatusBar();
+}
+
+function hideColPicker() {
+    var picker = document.getElementById('col-picker');
+    if (picker) picker.style.display = 'none';
+}
+
+function toggleColPicker(anchor) {
+    var picker = document.getElementById('col-picker');
+    if (!picker || !gridApi) return;
+    if (picker.style.display === 'block') {
+        picker.style.display = 'none';
+        return;
+    }
+    picker.innerHTML = '';
+    dataColumns().forEach(function(col) {
+        var row = document.createElement('label');
+        row.className = 'ctx-menu-item';
+        var cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = col.isVisible();
+        cb.addEventListener('click', function(e) { e.stopPropagation(); });
+        cb.addEventListener('change', function() {
+            setColumnHidden(col.getColId(), !cb.checked);
+            cb.checked = col.isVisible();
+        });
+        row.appendChild(cb);
+        var span = document.createElement('span');
+        span.textContent = col.getColDef().headerName || col.getColId();
+        row.appendChild(span);
+        picker.appendChild(row);
+    });
+    var rect = anchor.getBoundingClientRect();
+    picker.style.left = Math.max(8, rect.left) + 'px';
+    picker.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
+    picker.style.top = 'auto';
+    picker.style.display = 'block';
 }
 
 function hideContextMenu() {
@@ -683,6 +750,16 @@ function initStatusBar() {
     var actions = document.createElement('span');
     actions.id = 'status-actions';
 
+    var btnCols = document.createElement('button');
+    btnCols.id = 'btn-columns';
+    btnCols.textContent = 'Columns';
+    btnCols.title = 'Show or hide columns';
+    btnCols.addEventListener('click', function(e) {
+        e.stopPropagation();
+        toggleColPicker(btnCols);
+    });
+    actions.appendChild(btnCols);
+
     var btnReset = document.createElement('button');
     btnReset.id = 'btn-reset';
     btnReset.textContent = '⊘ Reset';
@@ -710,6 +787,11 @@ function initStatusBar() {
         var flex = document.getElementById('flex');
         flex.parentNode.insertBefore(bar, flex.nextSibling);
     }
+    if (!document.getElementById('col-picker')) {
+        var picker = document.createElement('div');
+        picker.id = 'col-picker';
+        document.body.appendChild(picker);
+    }
 }
 
 function updateStatusBar() {
@@ -718,13 +800,15 @@ function updateStatusBar() {
     var displayed = 0;
     gridApi.forEachNodeAfterFilter(function() { displayed++; });
     var total = sourceData.length;
-    var cols = (gridApi.getColumns() || []).filter(function(c) {
-        return c.getColId() !== '__lineNum';
-    }).length;
+    var allCols = dataColumns();
+    var vis = allCols.filter(function(c) { return c.isVisible(); }).length;
+    var hidden = allCols.length - vis;
     var rowText = displayed === total
         ? total.toLocaleString() + ' rows'
         : 'Showing ' + displayed.toLocaleString() + ' of ' + total.toLocaleString() + ' rows';
-    info.textContent = rowText + ' · ' + cols + ' cols';
+    var colText = vis + ' cols';
+    if (hidden > 0) colText += ' (' + hidden + ' hidden)';
+    info.textContent = rowText + ', ' + colText;
 }
 
 
@@ -775,12 +859,21 @@ function initContextMenu() {
             });
         }
 
+        addItem('Hide Column', function() {
+            setColumnHidden(colId, true);
+        });
+        if (visibleDataColumns().length < dataColumns().length) {
+            addItem('Show All Columns', function() {
+                showAllColumns();
+            });
+        }
+
         contextMenuEl.style.left = e.pageX + 'px';
         contextMenuEl.style.top = e.pageY + 'px';
         contextMenuEl.style.display = 'block';
     });
 
-    document.addEventListener('click', function() { hideContextMenu(); });
+    document.addEventListener('click', function() { hideContextMenu(); hideColPicker(); });
 }
 
 function copyToClipboard(text, feedback) {
