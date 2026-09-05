@@ -25,7 +25,12 @@ export class CsvEditorProvider implements vscode.CustomTextEditorProvider {
 		_token: vscode.CancellationToken
 	): Promise<void> {
         let editor = new CsvDocumentView(this.context, document.uri);
-        editor.languageId = document.languageId;
+        const path = document.uri.path.toLowerCase();
+        if (path.endsWith('.tsv') || path.endsWith('.tab')) {
+            editor.languageId = 'tsv';
+        } else {
+            editor.languageId = document.languageId;
+        }
         editor.panel = webviewPanel;
         editor.initialize();
 		editor.enableEditing(document);

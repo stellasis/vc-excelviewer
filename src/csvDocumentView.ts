@@ -52,7 +52,8 @@ export default class CsvDocumentView extends BaseDocumentView {
                 this.languageId = lang;
             }
         }
-        if (lang === 'tsv') {
+        const path = (this.uri && this.uri.path) ? this.uri.path.toLowerCase() : '';
+        if (lang === 'tsv' || path.endsWith('.tsv') || path.endsWith('.tab')) {
             sep = "\t";
         } else if (lang === 'csv (semicolon)') {
             sep = ";";

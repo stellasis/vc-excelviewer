@@ -625,6 +625,15 @@ function initPage() {
 function parseContent(text) {
     const options = getOptions();
     var sep = options.separator;
+    var uri = (options.uri || '') + '';
+    if (/\.tsv($|\?)/i.test(uri) || /\.tab($|\?)/i.test(uri) || options.languageId === 'tsv') {
+        sep = '\t';
+    } else {
+        var firstLine = (text.split(/\r?\n/, 1)[0] || '');
+        var tabs = (firstLine.match(/\t/g) || []).length;
+        var commas = (firstLine.match(/,/g) || []).length;
+        if (tabs > commas) sep = '\t';
+    }
     var quote = options.quoteMark;
     var hasHeaders = options.hasHeaders;
     var comment = options.commentCharacter;
